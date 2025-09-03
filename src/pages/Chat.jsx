@@ -1,17 +1,14 @@
 import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
-
-const socket = io(import.meta.env.VITE_SERVER_URL); // connect to server
+import { useSocket } from "../context/SocketContext";
 
 export default function Chat() {
+  const { socket, connected, attempting } = useSocket();
   const [messages, setMessages] = useState([]);
   const [name, setName] = useState("Player");
   const [text, setText] = useState("");
-  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    socket.on("connect", () => setConnected(true));
-    socket.on("disconnect", () => setConnected(false));
+    if (!socket) return;
 
     socket.on("server_welcome", (msg) => {
       setMessages((prev) => [...prev, { from: "Server", text: msg }]);
@@ -22,12 +19,10 @@ export default function Chat() {
     });
 
     return () => {
-      socket.off("connect");
-      socket.off("disconnect");
       socket.off("server_welcome");
       socket.off("chat_message");
     };
-  }, []);
+  }, [socket]);
 
   const onSend = (e) => {
     e.preventDefault();
@@ -41,7 +36,10 @@ export default function Chat() {
     <div
       style={{ maxWidth: 520, margin: "40px auto", fontFamily: "system-ui" }}
     >
-      <h2>Socket.IO Demo {connected ? "🟢" : "🔴"}</h2>
+      <h2>
+        Socket.IO Demo{" "}
+        {connected ? "🟢" : attempting ? "🟡 Reconnecting…" : "🔴"}
+      </h2>
 
       <form
         onSubmit={onSend}
