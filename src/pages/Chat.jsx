@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-// const socket = io("http://localhost:3001"); // connect to server
-const socket = io("https://game-server-wlrb.onrender.com"); // connect to server
+const socket = io(import.meta.env.VITE_SERVER_URL); // connect to server
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
