@@ -51,11 +51,11 @@ export default function UnoRoom() {
 
   // map UNO colors → Tailwind background classes
   const COLOR_MAP = {
-    B: "bg-blue-100",
-    G: "bg-green-100",
-    R: "bg-red-100",
-    Y: "bg-yellow-100",
-    "": "bg-gray-100",
+    B: "bg-blue-200",
+    G: "bg-green-200",
+    R: "bg-red-200",
+    Y: "bg-yellow-200",
+    "": "bg-gray-200",
   };
 
   useEffect(() => {
@@ -208,9 +208,11 @@ export default function UnoRoom() {
           {users.length === 2 && (
             <div className="w-full h-full flex flex-col justify-between">
               <div>
-                <p>{currentOpponent}</p>
+                <div className="flex w-full items-center justify-center text-center pb-4">
+                  <p className="font-bold">{currentOpponent}</p>
+                </div>
 
-                <div className="flex items-start justify-center">
+                <div className="flex flex-wrap justify-center">
                   {(role === "player1" ? player2Deck : player1Deck).map(
                     (_, i) => (
                       <CardBack key={i} i={i} />
@@ -240,21 +242,23 @@ export default function UnoRoom() {
               </div>
 
               <div>
-                <p>{playerName}</p>
-
-                <div className="flex items-start justify-center">
+                <div className="flex flex-wrap justify-center">
                   {(role === "player1" ? player1Deck : player2Deck).map(
                     (item, i) => (
                       <button
                         key={i}
                         disabled={turn !== role}
                         onClick={() => handleCardPlay(item)}
-                        className="cursor-pointer disabled:grayscale-90 disabled:cursor-default"
+                        className="cursor-pointer disabled:grayscale disabled:cursor-default"
                       >
                         <CardFront item={item} i={i} />
                       </button>
                     )
                   )}
+                </div>
+
+                <div className="flex w-full items-center justify-center text-center pt-4">
+                  <p className="font-bold">{playerName}</p>
                 </div>
               </div>
             </div>
