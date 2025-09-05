@@ -5,6 +5,7 @@ import CardFront from "../../components/CardFront";
 import { PACK_OF_CARDS } from "../../constants/cards";
 import shuffleArray from "../../utils/shuffleArray";
 import { useSocket } from "../../context/SocketContext";
+import handleCardPlayService from "../../utils/uno/handleCardPlay";
 
 //NUMBER CODES FOR ACTION CARDS
 //SKIP - 404
@@ -143,17 +144,6 @@ export default function UnoRoom() {
         playedCardsPile,
         drawCardPile,
       }) => {
-        console.log({
-          gameOver,
-          winner,
-          turn,
-          player1Deck,
-          player2Deck,
-          currentColor,
-          currentNumber,
-          playedCardsPile,
-          drawCardPile,
-        });
         gameOver && setGameOver(gameOver);
         gameOver === true && playGameOverSound();
         winner && setWinner(winner);
@@ -186,76 +176,17 @@ export default function UnoRoom() {
   }, []);
 
   const handleCardPlay = (card) => {
-    if (/^\d[RGBY]$/.test(card) || card.startsWith("skip")) {
-      let numberOfPlayedCard = null;
-      let colorOfPlayedCard = null;
-
-      // Skip card
-      if (card.startsWith("skip")) {
-        colorOfPlayedCard = card[4]; // e.g. "skipR" → "R"
-        numberOfPlayedCard = 404; // special code for skip
-      }
-
-      // Number card (regex match like "5R")
-      else if (/^\d[RGBY]$/.test(card)) {
-        numberOfPlayedCard = card[0]; // "5"
-        colorOfPlayedCard = card[1]; // "R"
-      }
-
-      // Determine next turn
-      let nextTurn = turn === "player1" ? "player2" : "player1";
-
-      // If skip card → keep the same player’s turn
-      if (card.startsWith("skip")) {
-        nextTurn = turn;
-      }
-
-      if (
-        currentColor === colorOfPlayedCard ||
-        currentNumber === numberOfPlayedCard
-      ) {
-        // choose deck based on turn
-        const currentDeck = turn === "player1" ? player1Deck : player2Deck;
-        const removeIndex = currentDeck.indexOf(card);
-
-        // build updated deck after playing card
-        const updatedDeck = [
-          ...currentDeck.slice(0, removeIndex),
-          ...currentDeck.slice(removeIndex + 1),
-        ];
-
-        socket.emit("updateGameState", {
-          // gameOver: checkGameOver(player1Deck),
-          // winner: checkWinner(player1Deck, "Player 1"),
-          turn: nextTurn,
-          playedCardsPile: [
-            ...playedCardsPile.slice(0, playedCardsPile.length),
-            card,
-            ...playedCardsPile.slice(playedCardsPile.length),
-          ],
-          player1Deck: turn === "player1" ? updatedDeck : player1Deck,
-          player2Deck: turn === "player2" ? updatedDeck : player2Deck,
-          currentColor: colorOfPlayedCard,
-          currentNumber: numberOfPlayedCard,
-        });
-      }
-    }
-
-    if (card.startsWith("_")) {
-      console.log("reverse", card);
-    }
-
-    if (card.startsWith("D2")) {
-      console.log("draw2", card);
-    }
-
-    if (card === "W") {
-      console.log("wild", card);
-    }
-
-    if (card === "D4W") {
-      console.log("draw4", card);
-    }
+    handleCardPlayService(
+      socket,
+      card,
+      turn,
+      player1Deck,
+      player2Deck,
+      drawCardPile,
+      currentNumber,
+      currentColor,
+      playedCardsPile
+    );
   };
 
   return (
@@ -314,13 +245,14 @@ export default function UnoRoom() {
                 <div className="flex items-start justify-center">
                   {(role === "player1" ? player1Deck : player2Deck).map(
                     (item, i) => (
-                      <div
+                      <button
                         key={i}
+                        disabled={turn !== role}
                         onClick={() => handleCardPlay(item)}
-                        className="cursor-pointer"
+                        className="cursor-pointer disabled:grayscale-90 disabled:cursor-default"
                       >
                         <CardFront item={item} i={i} />
-                      </div>
+                      </button>
                     )
                   )}
                 </div>
