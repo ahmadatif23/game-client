@@ -63,15 +63,15 @@ function getCardContent(item) {
   return <p className="text-4xl font-light">{item}</p>; // fallback
 }
 
-export default function CardFront({ item, i }) {
+export default function CardFront({ item, i, stack = false }) {
   const bgColor = getCardColor(item);
   const label = getCardLabel(item);
   const content = getCardContent(item);
 
   return (
     <div
-      className={`z-10 w-[80px] h-[117px] shadow-pressed rounded-md shrink-0 flex items-center justify-center text-white
-      ${i !== 0 ? "-ml-[15px]" : ""} ${bgColor}`}
+      className={`z-10 w-[80px] h-[117px] shadow-pressed rounded-xl shrink-0 flex items-center justify-center text-white
+      ${i !== 0 && !stack ? "-ml-[15px]" : ""} ${bgColor}`}
     >
       <div className="grid grid-rows-3 w-full h-full">
         {/* Top-left label */}

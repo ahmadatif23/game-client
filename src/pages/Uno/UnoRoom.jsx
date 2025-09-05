@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import CardBack from "../../components/CardBack";
 import CardFront from "../../components/CardFront";
-import { PACK_OF_CARDS } from "../../constants/cards";
-import shuffleArray from "../../utils/shuffleArray";
+
 import { useSocket } from "../../context/SocketContext";
 import handleCardPlayService from "../../utils/uno/handleCardPlay";
+import handleInitiatePlayService from "../../utils/uno/handleInitiatePlay";
+import handlePlaySocketService from "../../utils/uno/handlePlaySocket";
 
 //NUMBER CODES FOR ACTION CARDS
 //SKIP - 404
@@ -61,110 +62,27 @@ export default function UnoRoom() {
   useEffect(() => {
     if (!socket) return;
 
-    const shuffledCards = shuffleArray(PACK_OF_CARDS);
-    const player1Deck = shuffledCards.splice(0, 5);
-    const player2Deck = shuffledCards.splice(0, 5);
-
-    let startingCardIndex;
-    while (true) {
-      startingCardIndex = Math.floor(Math.random() * 94);
-      if (
-        shuffledCards[startingCardIndex] === "skipR" ||
-        shuffledCards[startingCardIndex] === "_R" ||
-        shuffledCards[startingCardIndex] === "D2R" ||
-        shuffledCards[startingCardIndex] === "skipG" ||
-        shuffledCards[startingCardIndex] === "_G" ||
-        shuffledCards[startingCardIndex] === "D2G" ||
-        shuffledCards[startingCardIndex] === "skipB" ||
-        shuffledCards[startingCardIndex] === "_B" ||
-        shuffledCards[startingCardIndex] === "D2B" ||
-        shuffledCards[startingCardIndex] === "skipY" ||
-        shuffledCards[startingCardIndex] === "_Y" ||
-        shuffledCards[startingCardIndex] === "D2Y" ||
-        shuffledCards[startingCardIndex] === "W" ||
-        shuffledCards[startingCardIndex] === "D4W"
-      ) {
-        continue;
-      } else break;
-    }
-
-    const playedCardsPile = shuffledCards.splice(startingCardIndex, 1);
-    const drawCardPile = shuffledCards;
-
-    socket.emit("initGameState", {
-      gameOver: false,
-      turn: "player1",
-      player1Deck: [...player1Deck],
-      player2Deck: [...player2Deck],
-      currentColor:
-        playedCardsPile.length > 0 ? playedCardsPile[0].charAt(1) : null,
-      currentNumber:
-        playedCardsPile.length > 0 ? playedCardsPile[0].charAt(0) : null,
-      playedCardsPile: [...playedCardsPile],
-      drawCardPile: [...drawCardPile],
-    });
+    handleInitiatePlayService(socket);
   }, []);
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.on(
-      "initGameState",
-      ({
-        gameOver,
-        turn,
-        player1Deck,
-        player2Deck,
-        currentColor,
-        currentNumber,
-        playedCardsPile,
-        drawCardPile,
-      }) => {
-        setGameOver(gameOver);
-        setTurn(turn);
-        setPlayer1Deck(player1Deck);
-        setPlayer2Deck(player2Deck);
-        setCurrentColor(currentColor);
-        setCurrentNumber(currentNumber);
-        setPlayedCardsPile(playedCardsPile);
-        setDrawCardPile(drawCardPile);
-      }
+    handlePlaySocketService(
+      socket,
+      setGameOver,
+      setWinner,
+      setTurn,
+      setPlayer1Deck,
+      setPlayer2Deck,
+      setCurrentColor,
+      setCurrentNumber,
+      setPlayedCardsPile,
+      setDrawCardPile,
+      setUsers,
+      setRole,
+      setCurrentOpponent
     );
-
-    socket.on(
-      "updateGameState",
-      ({
-        gameOver,
-        winner,
-        turn,
-        player1Deck,
-        player2Deck,
-        currentColor,
-        currentNumber,
-        playedCardsPile,
-        drawCardPile,
-      }) => {
-        gameOver && setGameOver(gameOver);
-        gameOver === true && playGameOverSound();
-        winner && setWinner(winner);
-        turn && setTurn(turn);
-        player1Deck && setPlayer1Deck(player1Deck);
-        player2Deck && setPlayer2Deck(player2Deck);
-        currentColor && setCurrentColor(currentColor);
-        currentNumber && setCurrentNumber(currentNumber);
-        playedCardsPile && setPlayedCardsPile(playedCardsPile);
-        drawCardPile && setDrawCardPile(drawCardPile);
-      }
-    );
-
-    socket.on("roomData", ({ users }) => {
-      setUsers(users);
-    });
-
-    socket.on("currentUserData", ({ role, opponentName }) => {
-      setRole(role);
-      setCurrentOpponent(opponentName);
-    });
 
     // cleanup
     return () => {
@@ -207,7 +125,7 @@ export default function UnoRoom() {
 
           {users.length === 2 && (
             <div className="w-full h-full flex flex-col justify-between">
-              <div>
+              <div className="flex-1 flex justify-start flex-col">
                 <div className="flex w-full items-center justify-center text-center pb-4">
                   <p className="font-bold">{currentOpponent}</p>
                 </div>
@@ -236,12 +154,13 @@ export default function UnoRoom() {
                     <CardFront
                       item={playedCardsPile[playedCardsPile.length - 1]}
                       i={playedCardsPile.length - 1}
+                      stack={true}
                     />
                   )}
                 </div>
               </div>
 
-              <div>
+              <div className="flex-1 flex justify-end flex-col">
                 <div className="flex flex-wrap justify-center">
                   {(role === "player1" ? player1Deck : player2Deck).map(
                     (item, i) => (
@@ -249,7 +168,7 @@ export default function UnoRoom() {
                         key={i}
                         disabled={turn !== role}
                         onClick={() => handleCardPlay(item)}
-                        className="cursor-pointer disabled:grayscale disabled:cursor-default"
+                        className="cursor-pointer disabled:grayscale-75 disabled:cursor-default"
                       >
                         <CardFront item={item} i={i} />
                       </button>
