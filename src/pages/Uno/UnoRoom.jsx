@@ -6,19 +6,25 @@ import { PACK_OF_CARDS } from "../../constants/cards";
 import shuffleArray from "../../utils/shuffleArray";
 import { useSocket } from "../../context/SocketContext";
 
+//NUMBER CODES FOR ACTION CARDS
+//SKIP - 404
+//DRAW 2 - 252
+//WILD - 300
+//DRAW 4 WILD - 600
+
 export default function UnoRoom() {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
-  const roomCode = queryParams.get("roomCode");
+  const room = queryParams.get("roomCode");
   const playerName = queryParams.get("name");
 
   const { socket, connected, attempting } = useSocket();
 
   // useState: Initialize socket state
-  const [room, setRoom] = useState(roomCode);
   const [roomFull, setRoomFull] = useState(false);
   const [users, setUsers] = useState([]);
-  const [currentUser, setCurrentUser] = useState("");
+  const [role, setRole] = useState("");
+  const [currentOpponent, setCurrentOpponent] = useState("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
 
@@ -41,6 +47,15 @@ export default function UnoRoom() {
   const [currentColor, setCurrentColor] = useState("");
   const [currentNumber, setCurrentNumber] = useState("");
   const [drawCardPile, setDrawCardPile] = useState([]);
+
+  // map UNO colors → Tailwind background classes
+  const COLOR_MAP = {
+    B: "bg-blue-100",
+    G: "bg-green-100",
+    R: "bg-red-100",
+    Y: "bg-yellow-100",
+    "": "bg-gray-100",
+  };
 
   useEffect(() => {
     if (!socket) return;
@@ -77,7 +92,7 @@ export default function UnoRoom() {
 
     socket.emit("initGameState", {
       gameOver: false,
-      turn: "Player 1",
+      turn: "player1",
       player1Deck: [...player1Deck],
       player2Deck: [...player2Deck],
       currentColor:
@@ -128,6 +143,17 @@ export default function UnoRoom() {
         playedCardsPile,
         drawCardPile,
       }) => {
+        console.log({
+          gameOver,
+          winner,
+          turn,
+          player1Deck,
+          player2Deck,
+          currentColor,
+          currentNumber,
+          playedCardsPile,
+          drawCardPile,
+        });
         gameOver && setGameOver(gameOver);
         gameOver === true && playGameOverSound();
         winner && setWinner(winner);
@@ -142,12 +168,12 @@ export default function UnoRoom() {
     );
 
     socket.on("roomData", ({ users }) => {
-      console.log("users", users);
       setUsers(users);
     });
 
-    socket.on("currentUserData", ({ name }) => {
-      setCurrentUser(name);
+    socket.on("currentUserData", ({ role, opponentName }) => {
+      setRole(role);
+      setCurrentOpponent(opponentName);
     });
 
     // cleanup
@@ -160,32 +186,101 @@ export default function UnoRoom() {
   }, []);
 
   const handleCardPlay = (card) => {
-    console.log(card);
+    if (/^\d[RGBY]$/.test(card) || card.startsWith("skip")) {
+      let numberOfPlayedCard = null;
+      let colorOfPlayedCard = null;
+
+      // Skip card
+      if (card.startsWith("skip")) {
+        colorOfPlayedCard = card[4]; // e.g. "skipR" → "R"
+        numberOfPlayedCard = 404; // special code for skip
+      }
+
+      // Number card (regex match like "5R")
+      else if (/^\d[RGBY]$/.test(card)) {
+        numberOfPlayedCard = card[0]; // "5"
+        colorOfPlayedCard = card[1]; // "R"
+      }
+
+      // Determine next turn
+      let nextTurn = turn === "player1" ? "player2" : "player1";
+
+      // If skip card → keep the same player’s turn
+      if (card.startsWith("skip")) {
+        nextTurn = turn;
+      }
+
+      if (
+        currentColor === colorOfPlayedCard ||
+        currentNumber === numberOfPlayedCard
+      ) {
+        // choose deck based on turn
+        const currentDeck = turn === "player1" ? player1Deck : player2Deck;
+        const removeIndex = currentDeck.indexOf(card);
+
+        // build updated deck after playing card
+        const updatedDeck = [
+          ...currentDeck.slice(0, removeIndex),
+          ...currentDeck.slice(removeIndex + 1),
+        ];
+
+        socket.emit("updateGameState", {
+          // gameOver: checkGameOver(player1Deck),
+          // winner: checkWinner(player1Deck, "Player 1"),
+          turn: nextTurn,
+          playedCardsPile: [
+            ...playedCardsPile.slice(0, playedCardsPile.length),
+            card,
+            ...playedCardsPile.slice(playedCardsPile.length),
+          ],
+          player1Deck: turn === "player1" ? updatedDeck : player1Deck,
+          player2Deck: turn === "player2" ? updatedDeck : player2Deck,
+          currentColor: colorOfPlayedCard,
+          currentNumber: numberOfPlayedCard,
+        });
+      }
+    }
+
+    if (card.startsWith("_")) {
+      console.log("reverse", card);
+    }
+
+    if (card.startsWith("D2")) {
+      console.log("draw2", card);
+    }
+
+    if (card === "W") {
+      console.log("wild", card);
+    }
+
+    if (card === "D4W") {
+      console.log("draw4", card);
+    }
   };
 
   return (
-    <div className="w-screen h-screen p-4">
+    <div className={`w-screen h-screen p-4 ${COLOR_MAP[currentColor]}`}>
       {roomFull ? (
         <div className="flex w-full h-full items-center justify-center">
           <h1>Room Full</h1>
         </div>
       ) : (
         <div className="w-full h-full flex flex-col justify-center items-center">
-          {users.length === 1 && currentUser === "Player 2" && (
+          {users.length === 1 && role === "player2" && (
             <h1>Player 1 has left the game.</h1>
           )}
 
-          {users.length === 1 && currentUser === "Player 1" && (
+          {users.length === 1 && role === "player1" && (
             <h1>Waiting for Player 2 to join the game.</h1>
           )}
 
           {users.length === 2 && (
             <div className="w-full h-full flex flex-col justify-between">
               <div>
-                <p>{currentUser === "Player 1" ? "Player 2" : "Player 1"}</p>
+                <p>{currentOpponent}</p>
 
                 <div className="flex items-start justify-center">
-                  {(currentUser === "Player 1" ? player1Deck : player2Deck).map(
+                  {(role === "player1" ? player2Deck : player1Deck).map(
                     (_, i) => (
                       <CardBack key={i} i={i} />
                     )
@@ -217,7 +312,7 @@ export default function UnoRoom() {
                 <p>{playerName}</p>
 
                 <div className="flex items-start justify-center">
-                  {(currentUser === "Player 1" ? player1Deck : player2Deck).map(
+                  {(role === "player1" ? player1Deck : player2Deck).map(
                     (item, i) => (
                       <div
                         key={i}
