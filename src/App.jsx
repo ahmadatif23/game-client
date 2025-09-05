@@ -14,7 +14,7 @@ export default function App() {
         }}
       >
         <Link to="/chat">Chat Room</Link>
-        <Link to="/uno">Play UNO</Link>
+        <Link to="/uno/main">Play UNO</Link>
         <Link to="/tic-tac-toe">Play Tic Tac Toe</Link>
       </nav>
     </div>

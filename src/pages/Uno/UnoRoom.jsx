@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import CardBack from "../components/CardBack";
-import CardFront from "../components/CardFront";
-import { PACK_OF_CARDS } from "../constants/cards";
-import shuffleArray from "../utils/shuffleArray";
-import { useSocket } from "../context/SocketContext";
+import CardBack from "../../components/CardBack";
+import CardFront from "../../components/CardFront";
+import { PACK_OF_CARDS } from "../../constants/cards";
+import shuffleArray from "../../utils/shuffleArray";
+import { useSocket } from "../../context/SocketContext";
 
-export default function Uno() {
+export default function UnoRoom() {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const roomCode = queryParams.get("roomCode");
+  const playerName = queryParams.get("name");
 
   const { socket, connected, attempting } = useSocket();
 
@@ -25,7 +26,7 @@ export default function Uno() {
   useEffect(() => {
     if (!socket || !room) return;
 
-    socket?.emit("join", { room }, (error) => {
+    socket?.emit("join", { room, playerName }, (error) => {
       if (error) setRoomFull(true);
     });
   }, [room]);
@@ -213,7 +214,7 @@ export default function Uno() {
               </div>
 
               <div>
-                <p>{currentUser}</p>
+                <p>{playerName}</p>
 
                 <div className="flex items-start justify-center">
                   {(currentUser === "Player 1" ? player1Deck : player2Deck).map(
