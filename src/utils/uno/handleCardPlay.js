@@ -1,3 +1,5 @@
+import { checkGameOver, checkWinner } from "./checkGameStatus";
+
 export default function handleCardPlayService(
   socket,
   card,
@@ -116,6 +118,8 @@ export default function handleCardPlayService(
     card === "D4W"
   ) {
     socket.emit("updateGameState", {
+      gameOver: checkGameOver(currentDeck),
+      winner: checkWinner(currentDeck, turn),
       turn: nextTurn,
       playedCardsPile: [...playedCardsPile, card],
       player1Deck: updatedPlayer1Deck,

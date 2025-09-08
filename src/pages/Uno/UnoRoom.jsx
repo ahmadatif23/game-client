@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import CardBack from "../../components/CardBack";
 import CardFront from "../../components/CardFront";
 
@@ -7,6 +7,9 @@ import { useSocket } from "../../context/SocketContext";
 import handleCardPlayService from "../../utils/uno/handleCardPlay";
 import handleInitiatePlayService from "../../utils/uno/handleInitiatePlay";
 import handlePlaySocketService from "../../utils/uno/handlePlaySocket";
+import MyModal from "../../components/Modal";
+import { DialogTitle } from "@headlessui/react";
+import handleCardDrawService from "../../utils/uno/handleCardDraw";
 
 //NUMBER CODES FOR ACTION CARDS
 //SKIP - 404
@@ -27,8 +30,6 @@ export default function UnoRoom() {
   const [users, setUsers] = useState([]);
   const [role, setRole] = useState("");
   const [currentOpponent, setCurrentOpponent] = useState("");
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
 
   // useEffect: Initialize socket
   useEffect(() => {
@@ -107,6 +108,19 @@ export default function UnoRoom() {
     );
   };
 
+  const handleCardDraw = () => {
+    handleCardDrawService(
+      socket,
+      turn,
+      player1Deck,
+      player2Deck,
+      drawCardPile,
+      currentNumber,
+      currentColor,
+      playedCardsPile
+    );
+  };
+
   return (
     <div className={`w-screen h-screen p-4 ${COLOR_MAP[currentColor]}`}>
       {roomFull ? (
@@ -142,8 +156,10 @@ export default function UnoRoom() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex items-center justify-center">
                   <button
-                    type="submit"
-                    className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:focus-visible:outline-indigo-500"
+                    type="button"
+                    disabled={turn !== role}
+                    onClick={handleCardDraw}
+                    className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:focus-visible:outline-indigo-500 cursor-pointer disabled:cursor-default disabled:bg-indigo-200"
                   >
                     Draw Card
                   </button>
@@ -183,6 +199,28 @@ export default function UnoRoom() {
             </div>
           )}
         </div>
+      )}
+
+      {gameOver && (
+        <MyModal isOpen={!!gameOver} setIsOpen={setGameOver}>
+          <DialogTitle
+            as="h3"
+            className="text-lg/7 text-center font-medium text-black"
+          >
+            {winner === role ? "You Won" : "You Lose"}
+          </DialogTitle>
+
+          {/* <p className="mt-2 text-sm/6 text-white/50"></p> */}
+
+          <div className="mt-4 flex items-center justify-center">
+            <Link
+              to="/uno/main"
+              className="flex w-auto justify-center rounded-md px-3 py-2 text-sm/6 font-semibold shadow-xs bg-indigo-500 text-white hover:bg-indigo-400 dark:bg-indigo-400 aria-disabled:bg-indigo-200 aria-disabled:pointer-events-none"
+            >
+              Play New Game
+            </Link>
+          </div>
+        </MyModal>
       )}
     </div>
   );
